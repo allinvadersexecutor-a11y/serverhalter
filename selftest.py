@@ -1,9 +1,11 @@
+import glob
 import json
 import math
 import os
 import sys
 import threading
 import time
+import zipfile
 
 os.environ.setdefault("CHEM_BOOT", "0")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -59,14 +61,56 @@ def held():
     return None if not h else [h["name"], h["count"]]
 
 
+def find_world():
+    best = None
+    for zp in sorted(glob.glob("/app/zips/*.zip")):
+        try:
+            names = zipfile.ZipFile(zp).namelist()
+        except Exception:
+            continue
+        lv = sorted((n for n in names if n.endswith("level.dat")), key=len)
+        if lv and best is None:
+            best = (zp, lv[0][:-len("level.dat")], names)
+    return best
+
+
+def inspect_world():
+    zips = {}
+    for zp in sorted(glob.glob("/app/zips/*.zip")):
+        try:
+            names = zipfile.ZipFile(zp).namelist()
+            zips[os.path.basename(zp)] = {"entradas": len(names), "primeras": names[:8], "level_dat": [n for n in names if n.endswith("level.dat")][:3], "datapacks": sorted({n[: n.index("datapacks/") + 10] + n[n.index("datapacks/") + 10 :].split("/")[0] for n in names if "datapacks/" in n})[:12]}
+        except Exception as e:
+            zips[os.path.basename(zp)] = str(e)
+    return zips
+
+
+def extract_world(best):
+    zp, prefix, _ = best
+    world = os.path.join(m.ROOT, "world")
+    n = 0
+    with zipfile.ZipFile(zp) as z:
+        for info in z.infolist():
+            if info.is_dir() or not info.filename.startswith(prefix):
+                continue
+            dest = os.path.join(world, info.filename[len(prefix):])
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            with open(dest, "wb") as f:
+                f.write(z.read(info))
+            n += 1
+    return {"zip": os.path.basename(zp), "prefijo": prefix, "archivos": n, "datapacks": sorted(os.listdir(os.path.join(world, "datapacks"))) if os.path.isdir(os.path.join(world, "datapacks")) else []}
+
+
 def run():
     step("mem_inicio", mem)
-    wz = os.environ.get("CHEM_WORLD_ZIP")
-    step("world_zip", lambda: {"existe": bool(wz and os.path.exists(wz))})
+    step("zips", inspect_world)
+    best = find_world()
     jar = step("descarga_jar", lambda: m.fetch_jar(os.environ.get("CHEM_MC_VERSION", "1.21.6")))
     if not jar:
         return
-    step("setup", lambda: m.t_setup({"server_jar": jar, "world_zip": wz if wz and os.path.exists(wz) else None, "properties": {"view-distance": 2, "simulation-distance": 2}}))
+    step("setup", lambda: m.t_setup({"server_jar": jar, "properties": {"view-distance": 2, "simulation-distance": 2}}))
+    if best:
+        step("extraer_mundo", lambda: extract_world(best))
     step("start", lambda: m.t_start({"timeout": 400}))
     step("mem_tras_start", mem)
     if not m.running():
