@@ -1,0 +1,9 @@
+{
+  "name": "chem-mc-bot",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "mineflayer": "4.37.1",
+    "vec3": "0.1.10"
+  }
+}
