@@ -10,6 +10,7 @@ import zipfile
 os.environ.setdefault("CHEM_BOOT", "0")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import chem_mcp as m
+import rebase as rb
 
 
 def out(tag, data):
@@ -108,6 +109,39 @@ def extract_world(best):
     return {"zip": os.path.basename(zp), "prefijo": prefix, "archivos": n, "datapacks": sorted(os.listdir(os.path.join(world, "datapacks"))) if os.path.isdir(os.path.join(world, "datapacks")) else []}
 
 
+def rebase_world():
+    d = os.path.join(m.ROOT, "world", "datapacks")
+    res = []
+    for f in sorted(os.listdir(d)):
+        if f.endswith(".zip") and f.startswith("chem"):
+            src = os.path.join(d, f)
+            tmp = src + ".new"
+            st = rb.rebase(src, tmp)
+            os.replace(tmp, src)
+            res.append([f, st])
+    return res
+
+
+def t_prepare(a):
+    jar = m.fetch_jar(a.get("version", "1.21.6"))
+    r = {"jar": jar, "setup": m.t_setup({"server_jar": jar, "properties": {"view-distance": 2, "simulation-distance": 2}})}
+    best = find_world()
+    if best:
+        r["mundo"] = extract_world(best)
+    if a.get("rebase"):
+        r["rebase"] = rebase_world()
+    return r
+
+
+def t_testrun(a):
+    threading.Thread(target=run, daemon=True).start()
+    return {"estado": "lanzada", "nota": "el resultado sale en el registro del servicio (CHEMTEST)"}
+
+
+m.TOOLS["server_prepare"] = (t_prepare, "Descarga el servidor vanilla, lo prepara, extrae el mundo de /app/zips y, con rebase=true, cambia el ítem base del datapack.", {"version": "str?", "rebase": "bool?"})
+m.TOOLS["test_run"] = (t_testrun, "Lanza la autoprueba completa en segundo plano; escribe CHEMTEST en el registro.", {})
+
+
 def run():
     step("mem_inicio", mem)
     step("zips", inspect_world)
@@ -118,6 +152,8 @@ def run():
     step("setup", lambda: m.t_setup({"server_jar": jar, "properties": {"view-distance": 2, "simulation-distance": 2}}))
     if best:
         step("extraer_mundo", lambda: extract_world(best))
+    if os.environ.get("CHEM_REBASE") == "1":
+        step("rebase", rebase_world)
     step("start", lambda: m.t_start({"timeout": 400}))
     step("mem_tras_start", mem)
     if not m.running():
@@ -167,11 +203,13 @@ def run():
     step("mensajes", lambda: bot("messages", since=0)["resultado"]["messages"][-30:])
     step("problemas_log", lambda: m.bad_lines(m.log_from(0), 40))
     step("mem_final", mem)
+    step("parar", lambda: m.t_stop({}))
     out("FIN", {"segundos": round(time.time() - T0)})
 
 
 T0 = time.time()
 
 if __name__ == "__main__":
-    threading.Thread(target=run, daemon=True).start()
+    if os.environ.get("CHEM_TEST") == "1":
+        threading.Thread(target=run, daemon=True).start()
     m.serve()
