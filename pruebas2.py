@@ -32,6 +32,23 @@ def cerca():
     return [[e["name"], e["distance"]] for e in s.bot("entities", max=80)["resultado"] if e["distance"] < 12 and e["name"] in ("interaction", "item_display", "text_display")]
 
 
+def recoger():
+    s.bot("attack", type="interaction", wait=20)
+    conteos = []
+    for i in range(14):
+        s.bot("wait", ticks=100)
+        c = cerca()
+        conteos.append([len(c), sum(1 for e in c if e[0] == "text_display")])
+        if not c:
+            break
+        if i == 5:
+            try:
+                s.bot("attack", type="interaction", wait=5)
+            except Exception as e:
+                conteos.append(str(e)[:80])
+    return conteos
+
+
 def run2():
     st = s.step
     st("mem_inicio", s.mem)
@@ -74,7 +91,7 @@ def run2():
     st("vaciar_inventario", lambda: s.rc("clear ChemBot"))
     st("esperar_vaciar", lambda: s.bot("wait", ticks=60))
     st("trigger_906_sin_reactivos", lambda: s.bot("chat", text="/trigger chem_react set 906", wait=120))
-    st("recoger_estacion", lambda: s.bot("attack", type="interaction", wait=120))
+    st("recoger_estacion", recoger)
     st("entidades_tras_recoger", cerca)
     st("inventario_final", s.inv)
     st("errores_finales", errores)
