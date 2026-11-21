@@ -51,20 +51,24 @@ def gas(casco):
     s.rc("effect clear ChemBot")
     s.rc("item replace entity ChemBot armor.head with %s" % ("minecraft:leather_helmet" if casco else "minecraft:air"))
     s.rc("execute at ChemBot run summon marker ~ ~ ~ {Tags:[\"chemx9a41_gas\",\"chemx9a41_gas_co\"]}")
-    s.rc("execute as @e[type=marker,tag=chemx9a41_gas_co] run scoreboard players set @s chem_gt 600")
+    s.rc("execute as @e[type=marker,tag=chemx9a41_gas_co] run scoreboard players set @s chem_gt 900")
     s.bot("wait", ticks=240)
-    r = s.rc("execute if entity @a[name=ChemBot,nbt={active_effects:[{id:\"minecraft:weakness\"}]}]")
+    d = {}
+    d["marcadores"] = s.rc("execute if entity @e[type=marker,tag=chemx9a41_gas_co]")
+    d["gt"] = s.rc("execute as @e[type=marker,tag=chemx9a41_gas_co] run scoreboard players get @s chem_gt")
+    d["efectos"] = s.rc("data get entity ChemBot active_effects")
+    d["casco"] = s.rc("data get entity ChemBot equipment.head")
     s.rc("kill @e[type=marker,tag=chemx9a41_gas]")
-    return r
+    return d
 
 
 def quemadura(bata):
     s.rc("effect give ChemBot minecraft:instant_health 1 20")
-    s.rc("effect clear ChemBot minecraft:weakness")
     s.rc("item replace entity ChemBot armor.chest with %s" % ("minecraft:leather_chestplate" if bata else "minecraft:air"))
     s.bot("wait", ticks=120)
-    r = rcs(["data get entity ChemBot Health", "scoreboard players set ChemBot chem_e 3500", "execute as ChemBot run function chem:calor", "data get entity ChemBot Health"])
-    return [x["out"] for x in r if "entity data" in x["out"]]
+    s.rc("scoreboard players set ChemBot chem_e 3500")
+    s.rc("execute as ChemBot run function chem:calor")
+    return s.rc("scoreboard players get ChemBot chem_t")
 
 
 def run3():
