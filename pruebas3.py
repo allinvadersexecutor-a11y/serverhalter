@@ -2,6 +2,7 @@ import os
 import sys
 import threading
 import time
+import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import selftest as s
@@ -23,6 +24,8 @@ def mejorar_world3():
             b = mj2.mejorar2(t1, t2)
             os.replace(t2, src)
             os.remove(t1)
+            with zipfile.ZipFile(src, "a") as z:
+                z.writestr("data/chem/function/zz_test_gas.mcfunction", "summon marker ~ ~ ~ {Tags:[\"chemx9a41_gas\",\"chemx9a41_gas_co\"]}\nexecute as @e[type=marker,tag=chemx9a41_gas_co,distance=..1] run scoreboard players set @s chem_gt 900\n")
             res.append([f, a, b])
     return res
 
@@ -50,8 +53,7 @@ def gas(casco):
     s.rc("clear ChemBot")
     s.rc("effect clear ChemBot")
     s.rc("item replace entity ChemBot armor.head with %s" % ("minecraft:leather_helmet" if casco else "minecraft:air"))
-    s.rc("execute at ChemBot run summon marker ~ ~ ~ {Tags:[\"chemx9a41_gas\",\"chemx9a41_gas_co\"]}")
-    s.rc("execute as @e[type=marker,tag=chemx9a41_gas_co] run scoreboard players set @s chem_gt 900")
+    s.rc("execute at ChemBot run function chem:zz_test_gas")
     s.bot("wait", ticks=240)
     d = {}
     d["marcadores"] = s.rc("execute if entity @e[type=marker,tag=chemx9a41_gas_co]")
