@@ -97,6 +97,7 @@ def run3():
         return
     st("asentar", lambda: s.bot("wait", ticks=300))
     st("survival", lambda: s.rc("gamemode survival ChemBot"))
+    st("entorno_seguro", lambda: [s.rc("difficulty peaceful"), s.rc("time set day"), s.rc("kill @e[type=zombie]")])
     for stem, ident in (("naoh", "NaOH"), ("ch3cooh", "CH3COOH"), ("nh3", "NH3"), ("so2", "SO2")):
         st("ph_" + stem, lambda stem=stem, ident=ident: dar(stem, ident))
     st("ph_sin_nada", lambda: (s.rc("clear ChemBot"), s.bot("wait", ticks=60), s.bot("chat", text="/trigger chem_react set 912", wait=120)["mensajes_nuevos"])[2])
